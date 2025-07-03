@@ -1,0 +1,35 @@
+default:
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  before_script:
+    - docker info
+
+variables:
+  INTEGRATION_TYPE: jira
+  VERSION: latest
+
+stages:
+  - ingest
+
+ingest_data:
+  stage: ingest
+  variables:
+    IMAGE_NAME: ghcr.io/port-labs/port-ocean-$INTEGRATION_TYPE:$VERSION
+  script:
+    - |
+        docker run -i --rm --platform=linux/amd64 \
+          -e OCEAN__PORT__CLIENT_ID=$PORT_CLIENT_ID \
+          -e OCEAN__PORT__CLIENT_SECRET=$PORT_CLIENT_SECRET \
+          -e OCEAN__PORT__BASE_URL="https://api.port.io" \
+          -e OCEAN__INITIALIZE_PORT_RESOURCES=true \
+          -e OCEAN__SEND_RAW_DATA_EXAMPLES=true \
+          -e OCEAN__EVENT_LISTENER='{"type": "ONCE"}' \
+          -e OCEAN__INTEGRATION__CONFIG__JIRA_HOST="Enter value here" \
+          -e OCEAN__INTEGRATION__CONFIG__ATLASSIAN_USER_EMAIL=$ATLASSIAN_USER_EMAIL \
+          -e OCEAN__INTEGRATION__CONFIG__ATLASSIAN_USER_TOKEN=$ATLASSIAN_USER_TOKEN \
+          $IMAGE_NAME
+
+  rules: # Run only when changes are made to the main branch
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
